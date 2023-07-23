@@ -3,8 +3,13 @@ package main
 import (
 	"fmt"
 	"time"
+	"xsis/assignment/internal/app/controller"
+	"xsis/assignment/internal/app/model"
+	"xsis/assignment/internal/app/repository"
+	"xsis/assignment/internal/app/service"
 	"xsis/assignment/internal/pkg/config"
 	"xsis/assignment/internal/pkg/db"
+	"xsis/assignment/internal/pkg/middleware"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -35,7 +40,9 @@ func init() {
 	// if db.Migrator().HasConstraint(&repo.Products{}, "products_name_key") {
 	// 	db.Migrator().DropConstraint(&repo.Products{}, "products_name_key")
 	// }
-	db.AutoMigrate()
+	db.AutoMigrate(
+		&model.Movies{},
+	)
 
 	// Setup logrus
 	logLevel, err := log.ParseLevel("debug")
@@ -60,8 +67,8 @@ func main() {
 
 	// implement middleware
 	r.Use(
-		// middleware.LoggingMiddleware(),
-		// middleware.RecoveryMiddleware(),
+		middleware.LoggingMiddleware(),
+		middleware.RecoveryMiddleware(),
 		cors.New(cors.Config{
 			AllowOrigins:     []string{"*"},
 			AllowMethods:     []string{"OPTIONS", "GET", "POST", "PATCH", "DELETE"},
@@ -75,6 +82,15 @@ func main() {
 		}),
 	)
 
+	movieRepo := repository.NewMoviesRepo(DBConn)
+	movieService := service.NewMoviesService(movieRepo)
+	movieController := controller.NewMoviesController(movieService)
+
+	r.POST("/Movies", movieController.Create)
+	r.GET("/Movies", movieController.GetMovies)
+	r.GET("/Movies/:id", movieController.GetMoviesByID)
+	r.PATCH("/Movies/:id", movieController.UpdateMoviesByID)
+	r.DELETE("/Movies/:id", movieController.DeleteMoviesByID)
 	appPort := fmt.Sprintf(":%s", cfg.ServerPort)
 
 	r.Run(appPort)

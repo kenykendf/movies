@@ -5,13 +5,14 @@ import (
 	"strconv"
 	"xsis/assignment/internal/app/schema"
 	"xsis/assignment/internal/pkg/handler"
+	"xsis/assignment/internal/pkg/reason"
 
 	"github.com/gin-gonic/gin"
 )
 
 type MoviesService interface {
 	CreateMovies(req *schema.CreateMovies) error
-	GetMovies() ([]schema.GetMovies, error)
+	GetMovies(search schema.QueryParams) ([]schema.GetMovies, error)
 	GetMoviesByID(ID int) (schema.GetMovies, error)
 	UpdateMoviesByID(ID int, req *schema.UpdateMovies) error
 	DeleteMoviesByID(ID int) error
@@ -34,7 +35,7 @@ func (mc *MoviesController) Create(ctx *gin.Context) {
 
 	err := mc.service.CreateMovies(req)
 	if err != nil {
-		handler.ResponseError(ctx, http.StatusUnprocessableEntity, "unable to create movies")
+		handler.ResponseError(ctx, http.StatusUnprocessableEntity, reason.MoviesCreateErr)
 		return
 	}
 
@@ -42,9 +43,16 @@ func (mc *MoviesController) Create(ctx *gin.Context) {
 }
 
 func (mc *MoviesController) GetMovies(ctx *gin.Context) {
-	data, err := mc.service.GetMovies()
+	search := schema.QueryParams{}
+	search.Limit = ctx.GetInt("limit")
+	search.Offset = ctx.GetInt("offset")
+	search.Title = ctx.Query("title")
+	search.SortBy = ctx.Query("sort_by")
+	search.AscDesc = ctx.GetInt("asc")
+
+	data, err := mc.service.GetMovies(search)
 	if err != nil {
-		handler.ResponseError(ctx, http.StatusUnprocessableEntity, "unable to fetch movies from database")
+		handler.ResponseError(ctx, http.StatusUnprocessableEntity, reason.MoviesListsErr)
 		return
 	}
 
@@ -61,7 +69,7 @@ func (mc *MoviesController) GetMoviesByID(ctx *gin.Context) {
 
 	data, err := mc.service.GetMoviesByID(movieID)
 	if err != nil {
-		handler.ResponseError(ctx, http.StatusUnprocessableEntity, "unable to fetch movies from database")
+		handler.ResponseError(ctx, http.StatusUnprocessableEntity, reason.MoviesListByIDErr)
 		return
 	}
 
@@ -69,7 +77,7 @@ func (mc *MoviesController) GetMoviesByID(ctx *gin.Context) {
 }
 
 func (mc *MoviesController) UpdateMoviesByID(ctx *gin.Context) {
-	var req schema.UpdateMovies
+	req := &schema.UpdateMovies{}
 	ID := ctx.Param("id")
 	movieID, _ := strconv.Atoi(ID)
 
@@ -77,9 +85,9 @@ func (mc *MoviesController) UpdateMoviesByID(ctx *gin.Context) {
 		return
 	}
 
-	err := mc.service.UpdateMoviesByID(movieID, &req)
+	err := mc.service.UpdateMoviesByID(movieID, req)
 	if err != nil {
-		handler.ResponseError(ctx, http.StatusUnprocessableEntity, "unable to update movie")
+		handler.ResponseError(ctx, http.StatusUnprocessableEntity, reason.MoviesUpdateErr)
 		return
 	}
 
@@ -92,7 +100,7 @@ func (mc *MoviesController) DeleteMoviesByID(ctx *gin.Context) {
 
 	err := mc.service.DeleteMoviesByID(movieID)
 	if err != nil {
-		handler.ResponseError(ctx, http.StatusUnprocessableEntity, "unable to delete movie")
+		handler.ResponseError(ctx, http.StatusUnprocessableEntity, reason.MoviesDeleteErr)
 		return
 	}
 

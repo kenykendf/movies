@@ -18,6 +18,10 @@ type Config struct {
 	RefreshTokenKey      string        `mapstructure:"REFRESH_TOKEN_KEY"`
 	AccessTokenDuration  time.Duration `mapstructure:"ACCESS_TOKEN_DURATION"`
 	RefreshTokenDuration time.Duration `mapstructure:"REFRESH_TOKEN_DURATION"`
+	CloudinaryName       string        `mapstructure:"CLOUDINARY_NAME"`
+	CloudinaryAPIKey     string        `mapstructure:"CLOUDINARY_API_KEY"`
+	CloudinarySecretKey  string        `mapstructure:"CLOUDINARY_SECRET_KEY"`
+	CloudinaryDir        string        `mapstructure:"CLOUDINARY_DIR"`
 }
 
 func LoadConfig(fileconfigpath string) (Config, error) {

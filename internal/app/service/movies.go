@@ -2,39 +2,53 @@ package service
 
 import (
 	"errors"
+	"mime/multipart"
 	"xsis/assignment/internal/app/model"
 	"xsis/assignment/internal/app/schema"
+	"xsis/assignment/internal/pkg/reason"
 
 	"github.com/sirupsen/logrus"
 )
 
 type MoviesRepo interface {
 	CreateMovies(params model.Movies) error
-	GetMovies() ([]model.Movies, error)
+	GetMovies(search schema.QueryParams) ([]model.Movies, error)
 	GetMoviesByID(ID int) (model.Movies, error)
 	UpdateMoviesByID(ID int, params model.Movies) error
 	DeleteMoviesByID(ID int) error
 }
 
-type MoviesService struct {
-	moviesRepo MoviesRepo
+type ImageUploader interface {
+	UploadImage(input *multipart.FileHeader) (string, error)
 }
 
-func NewMoviesService(moviesRepo MoviesRepo) *MoviesService {
+type MoviesService struct {
+	moviesRepo  MoviesRepo
+	uploadImage ImageUploader
+}
+
+func NewMoviesService(moviesRepo MoviesRepo, uploadImage ImageUploader) *MoviesService {
 	return &MoviesService{
-		moviesRepo: moviesRepo,
+		moviesRepo:  moviesRepo,
+		uploadImage: uploadImage,
 	}
 }
 
 func (ms *MoviesService) CreateMovies(req *schema.CreateMovies) error {
+	imageURL, err := ms.uploadImage.UploadImage(req.Image)
+	if err != nil {
+		logrus.Error("upload image movie : ", err)
+		return errors.New(reason.MoviesCreateErr)
+	}
+
 	movies := model.Movies{
 		Title:       req.Title,
 		Description: req.Description,
-		Rating:      0,
-		// Image: req,
+		Rating:      req.Rating,
+		Image:       imageURL,
 	}
 
-	err := ms.moviesRepo.CreateMovies(movies)
+	err = ms.moviesRepo.CreateMovies(movies)
 	if err != nil {
 		logrus.Error("unable to create new movies")
 		return err
@@ -43,10 +57,10 @@ func (ms *MoviesService) CreateMovies(req *schema.CreateMovies) error {
 	return nil
 }
 
-func (ms *MoviesService) GetMovies() ([]schema.GetMovies, error) {
+func (ms *MoviesService) GetMovies(search schema.QueryParams) ([]schema.GetMovies, error) {
 	var response []schema.GetMovies
 
-	data, err := ms.moviesRepo.GetMovies()
+	data, err := ms.moviesRepo.GetMovies(search)
 	if err != nil {
 		return nil, errors.New("movies data not found")
 	}
@@ -103,7 +117,17 @@ func (ms *MoviesService) UpdateMoviesByID(ID int, req *schema.UpdateMovies) erro
 		data.Description = movie.Description
 	}
 	data.Rating = req.Rating
-	// data.Image = req.Image
+
+	if req.Image != nil {
+		imageURL, err := ms.uploadImage.UploadImage(req.Image)
+		if err != nil {
+			logrus.Error("upload image movie : ", err)
+			return errors.New(reason.MoviesCreateErr)
+		}
+		data.Image = imageURL
+	} else {
+		data.Image = movie.Image
+	}
 
 	err = ms.moviesRepo.UpdateMoviesByID(ID, data)
 	if err != nil {

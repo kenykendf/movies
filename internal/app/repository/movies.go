@@ -2,6 +2,7 @@ package repository
 
 import (
 	"xsis/assignment/internal/app/model"
+	"xsis/assignment/internal/app/schema"
 
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -20,7 +21,7 @@ func NewMoviesRepo(DB *gorm.DB) *Movies {
 func (m *Movies) CreateMovies(params model.Movies) error {
 	movies := model.Movies{
 		Title:       params.Title,
-		Rating:      0,
+		Rating:      params.Rating,
 		Description: params.Description,
 		Image:       params.Image,
 	}
@@ -34,17 +35,35 @@ func (m *Movies) CreateMovies(params model.Movies) error {
 	return nil
 }
 
-func (m *Movies) GetMovies() ([]model.Movies, error) {
+func (m *Movies) GetMovies(search schema.QueryParams) ([]model.Movies, error) {
 	var (
 		movies []model.Movies
+		limit  = search.Limit
+		offset = search.Offset
+		sort   = search.SortBy
+		title  = search.Title
 	)
 
-	err := m.DB.Find(&movies).Error
+	err := m.DB.Order(sort).
+		Limit(limit).
+		Offset(offset).
+		Find(&movies).Error
 	if err != nil {
 		return movies, err
 	}
 
-	return movies, err
+	if search.Title != "" {
+		err := m.DB.Order(sort).
+			Limit(limit).
+			Offset(offset).
+			Where("title ilike ?", "%"+title+"%").
+			Find(&movies).Error
+		if err != nil {
+			return movies, err
+		}
+	}
+
+	return movies, nil
 }
 
 func (m *Movies) GetMoviesByID(ID int) (model.Movies, error) {

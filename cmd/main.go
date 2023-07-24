@@ -63,7 +63,7 @@ const (
 
 func main() {
 
-	r := gin.New()
+	r := gin.Default()
 
 	// implement middleware
 	r.Use(
@@ -82,15 +82,18 @@ func main() {
 		}),
 	)
 
+	imageService := service.NewUploadService(cfg.CloudinaryName, cfg.CloudinaryAPIKey, cfg.CloudinarySecretKey, cfg.CloudinaryDir)
+
 	movieRepo := repository.NewMoviesRepo(DBConn)
-	movieService := service.NewMoviesService(movieRepo)
+	movieService := service.NewMoviesService(movieRepo, imageService)
 	movieController := controller.NewMoviesController(movieService)
 
-	r.POST("/Movies", movieController.Create)
-	r.GET("/Movies", movieController.GetMovies)
-	r.GET("/Movies/:id", movieController.GetMoviesByID)
-	r.PATCH("/Movies/:id", movieController.UpdateMoviesByID)
-	r.DELETE("/Movies/:id", movieController.DeleteMoviesByID)
+	r.POST("/movies", movieController.Create)
+	r.GET("/movies", middleware.PaginationMiddleware(offset, limit, asc), movieController.GetMovies)
+	r.GET("/movies/:id", movieController.GetMoviesByID)
+	r.PATCH("/movies/:id", movieController.UpdateMoviesByID)
+	r.DELETE("/movies/:id", movieController.DeleteMoviesByID)
+
 	appPort := fmt.Sprintf(":%s", cfg.ServerPort)
 
 	r.Run(appPort)

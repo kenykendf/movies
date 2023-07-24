@@ -4,6 +4,12 @@ var (
 	InternalServerError = "internal server error"
 	RequestFormError    = "request format is not valid"
 
+	MoviesListsErr    = "unable to retrieve movies list"
+	MoviesListByIDErr = "unable to retrieve movies information"
+	MoviesUpdateErr   = "unable to update movies information"
+	MoviesDeleteErr   = "unable to delete movies"
+	MoviesCreateErr   = "unable to create new movies"
+
 	RegisterFailed      = "cannot register user"
 	UserAlreadyExist    = "user already exist"
 	LoginFailed         = "login failed, please check your email or password"

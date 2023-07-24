@@ -23,3 +23,6 @@ test:
 test-cover:  ## Open golang testing coverage
 test-cover:
 	go tool cover -html=coverage.out
+
+mock-gen:
+	mockgen -source=internal/app/service/movies.go -destination=internal/app/mocks/mock_movies.go -package=mocks

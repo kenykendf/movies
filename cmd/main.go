@@ -3,8 +3,13 @@ package main
 import (
 	"fmt"
 	"time"
+	"xsis/assignment/internal/app/controller"
+	"xsis/assignment/internal/app/model"
+	"xsis/assignment/internal/app/repository"
+	"xsis/assignment/internal/app/service"
 	"xsis/assignment/internal/pkg/config"
 	"xsis/assignment/internal/pkg/db"
+	"xsis/assignment/internal/pkg/middleware"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -35,7 +40,9 @@ func init() {
 	// if db.Migrator().HasConstraint(&repo.Products{}, "products_name_key") {
 	// 	db.Migrator().DropConstraint(&repo.Products{}, "products_name_key")
 	// }
-	db.AutoMigrate()
+	db.AutoMigrate(
+		&model.Movies{},
+	)
 
 	// Setup logrus
 	logLevel, err := log.ParseLevel("debug")
@@ -56,12 +63,12 @@ const (
 
 func main() {
 
-	r := gin.New()
+	r := gin.Default()
 
 	// implement middleware
 	r.Use(
-		// middleware.LoggingMiddleware(),
-		// middleware.RecoveryMiddleware(),
+		middleware.LoggingMiddleware(),
+		middleware.RecoveryMiddleware(),
 		cors.New(cors.Config{
 			AllowOrigins:     []string{"*"},
 			AllowMethods:     []string{"OPTIONS", "GET", "POST", "PATCH", "DELETE"},
@@ -74,6 +81,18 @@ func main() {
 			MaxAge: 12 * time.Hour,
 		}),
 	)
+
+	imageService := service.NewUploadService(cfg.CloudinaryName, cfg.CloudinaryAPIKey, cfg.CloudinarySecretKey, cfg.CloudinaryDir)
+
+	movieRepo := repository.NewMoviesRepo(DBConn)
+	movieService := service.NewMoviesService(movieRepo, imageService)
+	movieController := controller.NewMoviesController(movieService)
+
+	r.POST("/movies", movieController.Create)
+	r.GET("/movies", middleware.PaginationMiddleware(offset, limit, asc), movieController.GetMovies)
+	r.GET("/movies/:id", movieController.GetMoviesByID)
+	r.PATCH("/movies/:id", movieController.UpdateMoviesByID)
+	r.DELETE("/movies/:id", movieController.DeleteMoviesByID)
 
 	appPort := fmt.Sprintf(":%s", cfg.ServerPort)
 

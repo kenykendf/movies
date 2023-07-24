@@ -14,7 +14,7 @@ func RecoveryMiddleware() gin.HandlerFunc {
 		defer func() {
 			err := recover()
 			if err != nil {
-				logrus.Error("error : ", err)
+				logrus.Error("error message: ", err)
 				handler.ResponseError(ctx, http.StatusInternalServerError, reason.InternalServerError)
 			}
 		}()

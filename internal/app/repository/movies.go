@@ -71,7 +71,7 @@ func (m *Movies) GetMoviesByID(ID int) (model.Movies, error) {
 		movie model.Movies
 	)
 
-	err := m.DB.Find(&movie).Where("ID = ?", ID).Error
+	err := m.DB.Where("ID = ? ", ID).Find(&movie).Error
 	if err != nil {
 		logrus.Error("unable to retrieve movie detail")
 		return movie, err
